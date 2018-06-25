@@ -14,6 +14,7 @@ libraryDependencies ++= Seq(
   "org.apache.flink" %% "flink-streaming-scala" % flinkVer,
   "org.apache.flink" % "flink-shaded-jackson" % "2.7.9-3.0",
   "org.apache.flink" %% "flink-connector-kafka-0.11" % flinkVer,
+  "org.apache.flink" %% "flink-connector-elasticsearch-base" % flinkVer,
   "org.apache.flink" %% "flink-test-utils" % flinkVer % Test,
   "org.apache.flink" %% "flink-statebackend-rocksdb" % flinkVer % Test
 

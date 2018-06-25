@@ -6,6 +6,7 @@ package pers.chenqian.flink.practices.constants
   */
 object Key {
 
+  val EMPTY_STR = ""
   val Subscribe: String = "subscribe"
   val Kafka: String = "kafka"
   val UTF8 = "utf8"
