@@ -1,6 +1,7 @@
 package pers.chenqian.flink.practices.basic
 
 import java.net.{InetAddress, InetSocketAddress}
+import java.util
 
 import org.apache.flink.api.common.accumulators.DoubleMaximum
 import org.apache.flink.api.common.functions.AggregateFunction
@@ -9,8 +10,11 @@ import org.apache.flink.streaming.api.scala.function.ProcessWindowFunction
 import org.apache.flink.streaming.api.windowing.assigners.TumblingProcessingTimeWindows
 import org.apache.flink.streaming.api.windowing.time.Time
 import org.apache.flink.streaming.api.windowing.windows.TimeWindow
+import org.apache.flink.streaming.connectors.redis.RedisSink
+import org.apache.flink.streaming.connectors.redis.common.config.{FlinkJedisClusterConfig, FlinkJedisPoolConfig}
 import org.apache.flink.util.Collector
 import pers.chenqian.flink.practices.constants.{Idx, Key}
+import pers.chenqian.flink.practices.sink.RedisExampleMapper
 
 import scala.collection.mutable
 
@@ -20,7 +24,7 @@ class WithKafkaBasic {
   /**
     * 12345:100012:26.90:100000:93470000000:0:0
     */
-  def mapToEsKV(strVal: String): Array[Double] = {
+  def mapToArray(strVal: String): Array[Double] = {
     val partsArr = strVal.split(Key.KAFKA_SEP)
     try {
       val nowMs = System.currentTimeMillis()
@@ -60,6 +64,25 @@ class WithKafkaBasic {
     //    }))
   }
 
+  def addSink(mappedDS: DataStream[Array[Double]]) = {
+    import org.apache.flink.api.scala._
+
+    val conf = new FlinkJedisPoolConfig.Builder()
+      .setDatabase(0)
+      .setHost("localhost")
+      .setPort(6379)
+//      .setNodes(new util.HashSet[InetSocketAddress](util.Arrays.asList(
+//        new InetSocketAddress("localhost", 6379)
+//      )))
+      .build()
+
+    mappedDS
+      .map(arr => arr(Idx.GOODS_ID).toString -> arr(Idx.USER_ID).toString)
+      .windowAll(TumblingProcessingTimeWindows.of(Time.seconds(10)))
+      .maxBy(Idx.USER_ID)
+      .addSink(new RedisSink[(String, String)](conf, new RedisExampleMapper))
+      .setParallelism(1)
+  }
 
   def window(mappedDS: DataStream[Array[Double]]) = {
     import org.apache.flink.api.scala._
@@ -67,11 +90,20 @@ class WithKafkaBasic {
     mappedDS
       .keyBy(_ (Idx.GOODS_ID))
       .window(TumblingProcessingTimeWindows.of(Time.seconds(10)))
-      .max(Idx.USER_ID)
+      .maxBy(Idx.USER_ID)
       .map(_.mkString("|"))
       .print().setParallelism(1)
   }
 
+  def windowAll(mappedDS: DataStream[Array[Double]]) = {
+    import org.apache.flink.api.scala._
+
+    mappedDS
+      .windowAll(TumblingProcessingTimeWindows.of(Time.seconds(10)))
+      .maxBy(Idx.USER_ID)
+      .map(_.mkString("|"))
+      .print().setParallelism(1)
+  }
 
   def window2(mappedDS: DataStream[Array[Double]]) = {
     import org.apache.flink.api.scala._
@@ -120,18 +152,15 @@ class WithKafkaBasic {
           def createAccumulator(): DoubleMaximum = {
             return new DoubleMaximum()
           }
-
           @Override
           def add(value: Array[Double], accumulator: DoubleMaximum): DoubleMaximum = {
             accumulator.add(value(Idx.USER_ID))
             return accumulator
           }
-
           @Override
           def getResult(accumulator: DoubleMaximum): Double = {
             return accumulator.getLocalValue()
           }
-
           @Override
           def merge(a: DoubleMaximum, b: DoubleMaximum): DoubleMaximum = {
             a.merge(b)
@@ -157,5 +186,7 @@ class WithKafkaBasic {
       //      .map(_.mkString("|"))
       .print().setParallelism(1)
   }
+
+
 
 }

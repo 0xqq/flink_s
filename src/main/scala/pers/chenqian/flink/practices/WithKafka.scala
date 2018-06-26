@@ -18,6 +18,8 @@ import scala.collection.mutable
 object WithKafka extends WithKafkaBasic with WithKafkaFailed {
 
 
+
+
   def main(args: Array[String]): Unit = {
     val properties = new Properties()
     properties.setProperty("bootstrap.servers", "localhost:9092")
@@ -29,14 +31,18 @@ object WithKafka extends WithKafkaBasic with WithKafkaFailed {
     val env = StreamExecutionEnvironment.createLocalEnvironment()
     import org.apache.flink.api.scala._
 
-    val text = env.addSource(new FlinkKafkaConsumer011[String]("mytopic", new SimpleStringSchema(), properties))
+    val text = env
+      .addSource(new FlinkKafkaConsumer011[String]("mytopic", new SimpleStringSchema(), properties))
 
-    val mappedDS = text.map(mapToEsKV(_))
+    val mappedDS = text.map(mapToArray(_))
 
     //addToEs(mappedDS)
+//    addSink(mappedDS)
 //    window(mappedDS)
+//    windowAll(mappedDS)
 //    aggregate(mappedDS)
-    reduce(mappedDS)
+//    reduce(mappedDS)
+
 
     env.execute("Socket Window WordCount")
   }
