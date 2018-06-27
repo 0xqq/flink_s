@@ -5,13 +5,17 @@ import java.util
 
 import org.apache.flink.api.common.accumulators.DoubleMaximum
 import org.apache.flink.api.common.functions.AggregateFunction
-import org.apache.flink.streaming.api.scala.DataStream
+import org.apache.flink.streaming.api.functions.timestamps.BoundedOutOfOrdernessTimestampExtractor
+import org.apache.flink.streaming.api.scala.{DataStream, StreamExecutionEnvironment}
 import org.apache.flink.streaming.api.scala.function.ProcessWindowFunction
 import org.apache.flink.streaming.api.windowing.assigners.TumblingProcessingTimeWindows
 import org.apache.flink.streaming.api.windowing.time.Time
 import org.apache.flink.streaming.api.windowing.windows.TimeWindow
 import org.apache.flink.streaming.connectors.redis.RedisSink
 import org.apache.flink.streaming.connectors.redis.common.config.{FlinkJedisClusterConfig, FlinkJedisPoolConfig}
+import org.apache.flink.table.api.{QueryConfig, Table, TableEnvironment}
+import org.apache.flink.table.expressions.{Expression, ExpressionParser}
+import org.apache.flink.table.sinks.CsvTableSink
 import org.apache.flink.util.Collector
 import pers.chenqian.flink.practices.constants.{Idx, Key}
 import pers.chenqian.flink.practices.sink.RedisExampleMapper
@@ -29,7 +33,7 @@ class WithKafkaBasic {
     try {
       val nowMs = System.currentTimeMillis()
 
-      if (partsArr.length == 7) {
+      if (partsArr.length == 8) {
         return partsArr.map(_.toDouble)
       } else {
         println(s"strVal: $strVal 's partsArr.length:${partsArr.length} must be 7, so ignore this ConsumerRecord")
@@ -83,6 +87,24 @@ class WithKafkaBasic {
       .addSink(new RedisSink[(String, String)](conf, new RedisExampleMapper))
       .setParallelism(1)
   }
+
+
+  def assignTimestampsAndWatermarks(mappedDS: DataStream[Array[Double]]) = {
+    import org.apache.flink.api.scala._
+
+    mappedDS
+      .assignTimestampsAndWatermarks(
+        new BoundedOutOfOrdernessTimestampExtractor[Array[Double]](Time.milliseconds(5000L)) {
+        override def extractTimestamp(element: Array[Double]): Long = element.last.toLong
+      })
+      .keyBy(_ (Idx.GOODS_ID))
+      .window(TumblingProcessingTimeWindows.of(Time.milliseconds(5000L)))
+      .maxBy(Idx.USER_ID)
+      .map(_.mkString("|"))
+      .print().setParallelism(1)
+
+  }
+
 
   def window(mappedDS: DataStream[Array[Double]]) = {
     import org.apache.flink.api.scala._
@@ -188,5 +210,27 @@ class WithKafkaBasic {
   }
 
 
+  def sql(env: StreamExecutionEnvironment, mappedDS: DataStream[Array[Double]]) = {
+    val tableEnv = TableEnvironment.getTableEnvironment(env)
+    import org.apache.flink.api.scala._
+    import org.apache.flink.table.api.scala._
+
+    val expreArr = Seq(ExpressionParser.parseExpression(Key.GOODS_ID_))
+
+    // SQL query with an inlined (unregistered) table
+    val table: Table = tableEnv.fromDataStream(mappedDS,
+      expreArr: _*)
+    //'goods_id, 'user_id, 'raiting, 'view_counts, 'stay_ms, 'is_star, 'buy_counts, 'timestamp
+
+
+    tableEnv.registerTable(Key.T_GOODS_RAITING, table)
+
+    val resTable = tableEnv.sqlQuery(s"select max(${Key.USER_ID_}) from ${Key.T_GOODS_RAITING} group by ${Key.GOODS_ID_}")
+
+    val sink = new CsvTableSink(
+      s"/Users/sunzhongqian/tmp/csv/${Key.T_GOODS_RAITING}.csv", fieldDelim = ",")
+    resTable.writeToSink(sink)
+
+  }
 
 }

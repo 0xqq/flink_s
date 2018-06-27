@@ -6,18 +6,23 @@ scalaVersion := "2.11.12"
 
 lazy val slf4jVer = "1.7.25"
 lazy val flinkVer = "1.5.0"
+lazy val kafkaVer = "0.11.0.2"
 
 
 libraryDependencies ++= Seq(
   "org.apache.flink" % "flink-core" % flinkVer,
   "org.apache.flink" %% "flink-clients" % flinkVer,
-  "org.apache.flink" %% "flink-streaming-scala" % flinkVer,
   "org.apache.flink" % "flink-shaded-jackson" % "2.7.9-3.0",
-  "org.apache.flink" %% "flink-connector-kafka-0.11" % flinkVer,
+  "org.apache.flink" %% "flink-table" % flinkVer,
+  "org.apache.flink" %% "flink-scala" % flinkVer,
+  "org.apache.flink" %% "flink-streaming-scala" % flinkVer,
+  "org.apache.flink" %% "flink-connector-kafk-0.11" % flinkVer,
   "org.apache.flink" %% "flink-connector-elasticsearch-base" % flinkVer,
   "org.apache.bahir" %% "flink-connector-redis" % "1.0",
   "org.apache.flink" %% "flink-test-utils" % flinkVer % Test,
-  "org.apache.flink" %% "flink-statebackend-rocksdb" % flinkVer % Test
+  "org.apache.flink" %% "flink-statebackend-rocksdb" % flinkVer % Test,
+
+  "org.apache.kafka" % "kafka-clients" % kafkaVer
 
 ).map(_.exclude("org.slf4j", "*")).map(_.exclude("com.google.guava", "*"))
   .map(_.exclude("com.fasterxml.jackson.module", "*"))
