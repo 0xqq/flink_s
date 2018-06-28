@@ -16,7 +16,7 @@ libraryDependencies ++= Seq(
   "org.apache.flink" %% "flink-table" % flinkVer,
   "org.apache.flink" %% "flink-scala" % flinkVer,
   "org.apache.flink" %% "flink-streaming-scala" % flinkVer,
-  "org.apache.flink" %% "flink-connector-kafk-0.11" % flinkVer,
+  "org.apache.flink" %% "flink-connector-kafka-0.11" % flinkVer,
   "org.apache.flink" %% "flink-connector-elasticsearch-base" % flinkVer,
   "org.apache.bahir" %% "flink-connector-redis" % "1.0",
   "org.apache.flink" %% "flink-test-utils" % flinkVer % Test,

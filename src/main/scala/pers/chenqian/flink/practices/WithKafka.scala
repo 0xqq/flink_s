@@ -30,11 +30,12 @@ object WithKafka extends WithKafkaBasic with WithKafkaFailed {
 
     // get the execution environment
     val env = StreamExecutionEnvironment.getExecutionEnvironment
-    env.setStreamTimeCharacteristic(TimeCharacteristic.EventTime)
+//    env.setStreamTimeCharacteristic(TimeCharacteristic.EventTime)
     import org.apache.flink.api.scala._
 
     val text = env
       .addSource(new FlinkKafkaConsumer011[String]("mytopic", new SimpleStringSchema(), properties))
+      .setParallelism(1)
 
     val mappedDS = text.map(mapToArray(_))
 
@@ -45,8 +46,9 @@ object WithKafka extends WithKafkaBasic with WithKafkaFailed {
 //    windowAll(mappedDS)
 //    aggregate(mappedDS)
 //    reduce(mappedDS)
-
-    sql(env, mappedDS)
+    sqlOnly1(env, mappedDS)
+//    sqlOnly2(env, mappedDS)
+//    scanAndSqlOpe(env, mappedDS)
 
     env.execute("Socket Window WordCount")
   }

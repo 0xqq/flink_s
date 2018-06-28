@@ -39,6 +39,7 @@ object Key {
   val STAY_MS_ = "stay_ms"
   val IS_STAR_ = "is_star"
   val BUY_COUNTS_ = "buy_counts"
+  val TIMESTAMP = "timestamp"
   val AT_TIMESTAMP = "@timestamp"
   val YEAR_MONTH_ = "year_month"
   val MYTOPIC = "mytopic"
