@@ -35,7 +35,6 @@ object WithKafka extends WithKafkaBasic with WithKafkaFailed {
 
     val text = env
       .addSource(new FlinkKafkaConsumer011[String]("mytopic", new SimpleStringSchema(), properties))
-      .setParallelism(1)
 
     val mappedDS = text.map(mapToArray(_))
 
@@ -46,8 +45,7 @@ object WithKafka extends WithKafkaBasic with WithKafkaFailed {
 //    windowAll(mappedDS)
 //    aggregate(mappedDS)
 //    reduce(mappedDS)
-    sqlOnly1(env, mappedDS)
-//    sqlOnly2(env, mappedDS)
+//    sqlOnly(env, mappedDS)
 //    scanAndSqlOpe(env, mappedDS)
 
     env.execute("Socket Window WordCount")

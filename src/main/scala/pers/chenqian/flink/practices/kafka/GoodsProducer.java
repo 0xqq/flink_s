@@ -8,10 +8,14 @@ import org.apache.kafka.common.PartitionInfo;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Properties;
+import java.util.Random;
 import java.util.concurrent.TimeUnit;
 
 public class GoodsProducer {
 
+    static Random random = new Random();
+    static int gidBound = 4;
+    static int uidBound = 99999;
 
     public static void main(String[] args) throws Exception {
 
@@ -27,21 +31,25 @@ public class GoodsProducer {
         //生产者发送消息
         String topic = "mytopic";
         Producer<String, String> procuder = new KafkaProducer<String,String>(props);
-        String basicText = "1:1000x:27.90:100120:93412300000:1:0:";
         int sumUid = 0;
 
         for (int i = 1; i < 10; i++) {
-            String text = basicText.replaceFirst("x", String.valueOf(i)) + System.currentTimeMillis();
+            String gid = String.valueOf(genGid());
+            String uid = String.valueOf(genUid());
+
+            String text = gid + ":" + uid + ":0:0:0:0:0:" + System.currentTimeMillis();
             ProducerRecord<String, String> msg = new ProducerRecord<String, String>(topic, text);
             procuder.send(msg);
             sumUid += i;
             Thread.sleep(10L);
         }
 
+        int lastGid = genGid();
+        int lastUid = genUid();
         ProducerRecord<String, String> tooLateMsg = new ProducerRecord<String, String>
-                (topic, "1:11004:1004:0:0:0:0:" + (System.currentTimeMillis() - 111117000));
+                (topic, lastGid + ":" + lastUid + ":0:0:0:0:0:" + (System.currentTimeMillis() - 111117000));
         procuder.send(tooLateMsg);
-        sumUid += 11004;
+        sumUid += lastUid;
         System.out.println("sumUid:" + sumUid);
 
         //列出topic的相关信息
@@ -55,5 +63,17 @@ public class GoodsProducer {
         System.out.println("send message over.");
         procuder.close(100, TimeUnit.MILLISECONDS);
     }
+
+    private static int genGid() {
+        return random.nextInt(gidBound);
+//        return 100;
+    }
+
+    private static int genUid() {
+//        return random.nextInt(uidBound);
+        return 10002;
+    }
+
+
 
 }

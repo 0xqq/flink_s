@@ -212,72 +212,31 @@ class WithKafkaBasic {
       .print()
   }
 
+  val CSV_BASIC_PATH = s"/Users/sunzhongqian/tmp/csv/${Key.T_GOODS_RAITING}/"
 
-  def sqlOnly1(env: StreamExecutionEnvironment, mappedDS: DataStream[Array[Double]]) = {
+  def sqlOnly(env: StreamExecutionEnvironment, mappedDS: DataStream[Array[Double]]) = {
     val tableEnv = TableEnvironment.getTableEnvironment(env)
     import org.apache.flink.api.scala._
 
-    val expreArr = Seq(Key.GOODS_ID_, Key.USER_ID_, Key.RAITING,
-      Key.VIEW_COUNTS_, Key.STAY_MS_, Key.IS_STAR_, Key.BUY_COUNTS_, Key.TIMESTAMP)
-
-    val rowDS = mappedDS
-      .map(arr => GrVo.fromArray(arr))
-      .windowAll(TumblingProcessingTimeWindows.of(Time.seconds(5)))
-      .maxBy(Idx.USER_ID)
-
-    // SQL query with an inlined (unregistered) table
-//    val table: Table = tableEnv.fromDataStream(rowDS)
-//    tableEnv.registerTable(Key.T_GOODS_RAITING, table)
-
+    val rowDS = mappedDS.map(arr => GrVo.fromArray(arr))
     tableEnv.registerDataStream(Key.T_GOODS_RAITING, rowDS)
 
-    val sql = s"select goodsId, sum(userId) as sumUid from ${Key.T_GOODS_RAITING} group by goodsId"
-//  val sql = s"select goodsId, userId from ${Key.T_GOODS_RAITING}"
+    val sql = s"select goodsId, max(userId) as sumUid from ${Key.T_GOODS_RAITING} group by goodsId"
+//    val sql = s"select goodsId, userId from ${Key.T_GOODS_RAITING}"
     val resTable = tableEnv.sqlQuery(sql)
 
-//    val sql = s"insert into t_csv select max(userId) as maxUid from ${Key.T_GOODS_RAITING} group by goodsId"
-//    tableEnv.sqlUpdate(sql)
+    //这个使用场景是什么？
+//    val sql2 = s"insert into t_csv $sql"
+//    tableEnv.sqlUpdate(sql2)
 
     val retractStream = tableEnv.toRetractStream[(Double, Double)](resTable)
 
-    val csvPath = s"/Users/sunzhongqian/tmp/csv/${Key.T_GOODS_RAITING}/${System.currentTimeMillis()}/"
+    val csvPath = CSV_BASIC_PATH + System.currentTimeMillis()
     val asd = retractStream
       .filter(_._1)
       .map(tp => tp._2)
-      .writeAsText(csvPath, WriteMode.OVERWRITE)
-
-  }
-
-  def sqlOnly2(env: StreamExecutionEnvironment, mappedDS: DataStream[Array[Double]]) = {
-    val tableEnv = TableEnvironment.getTableEnvironment(env)
-    import org.apache.flink.api.scala._
-
-    val expreArr = Seq(Key.GOODS_ID_, Key.USER_ID_, Key.RAITING,
-      Key.VIEW_COUNTS_, Key.STAY_MS_, Key.IS_STAR_, Key.BUY_COUNTS_, Key.TIMESTAMP)
-
-    val rowDS = mappedDS.map(arr => GrVo.fromArray(arr))
-
-    // SQL query with an inlined (unregistered) table
-    val table: Table = tableEnv.fromDataStream(rowDS)
-
-    tableEnv.registerTable(Key.T_GOODS_RAITING, table)
-
-//    val sql = s"select max(userId) as maxUid from ${Key.T_GOODS_RAITING} group by goodsId"
-//    val sql = s"select goodsId, userId from ${Key.T_GOODS_RAITING}"
-//    val resTable = tableEnv.sqlQuery(sql)
-
-    val csvPath = s"/Users/sunzhongqian/tmp/csv/${Key.T_GOODS_RAITING}/${System.currentTimeMillis()}/"
-    val csvSink = new CsvTableSink(csvPath, ",", 1, WriteMode.OVERWRITE)
-    val fieldNames: Array[String] = Array("maxUid")
-    val fieldTypes: Array[TypeInformation[_]] = Array(Types.DOUBLE)
-    tableEnv.registerTableSink("t_csv", fieldNames, fieldTypes, csvSink)
-
-    val sql = s"insert into t_csv select max(userId) as maxUid from ${Key.T_GOODS_RAITING} group by goodsId"
-    tableEnv.sqlUpdate(sql)
-
-//    val csvPath = s"/Users/sunzhongqian/tmp/csv/${Key.T_GOODS_RAITING}/${System.currentTimeMillis()}/"
-//    val sink = new CsvTableSink(csvPath, fieldDelim = ",")
-//    resTable.writeToSink(sink)
+      .writeAsText(csvPath, WriteMode.NO_OVERWRITE)
+      .setParallelism(1)
 
   }
 
@@ -288,20 +247,22 @@ class WithKafkaBasic {
     import org.apache.flink.table.api.scala._
 
     val rowDS = mappedDS.map(arr => GrVo.fromArray(arr))
-
-    // SQL query with an inlined (unregistered) table
-    val table = tableEnv.fromDataStream(rowDS)
-    tableEnv.registerTable(Key.T_GOODS_RAITING, table)
+    tableEnv.registerDataStream(Key.T_GOODS_RAITING, rowDS)
 
     val orders = tableEnv.scan(Key.T_GOODS_RAITING)
-    val csvPath = s"/Users/sunzhongqian/tmp/csv/${Key.T_GOODS_RAITING}/${System.currentTimeMillis()}/"
+    val csvPath = CSV_BASIC_PATH + System.currentTimeMillis()
     val sink = new CsvTableSink(csvPath, ",", 1, WriteMode.OVERWRITE)
 
-    val result = orders
+    val resTable = orders
       .groupBy('goodsId)
-      .select('userId.max as 'maxUid)
-
+      .select('goodsId, 'userId.max as 'maxUid)
+      .toRetractStream[(Double, Double)]
+      .writeAsText(csvPath, WriteMode.NO_OVERWRITE)
+      .setParallelism(1)
 
   }
+
+
+
 
 }
