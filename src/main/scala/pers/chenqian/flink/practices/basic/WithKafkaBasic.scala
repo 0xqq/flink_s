@@ -5,9 +5,8 @@ import java.util
 
 import org.apache.flink.api.common.accumulators.DoubleMaximum
 import org.apache.flink.api.common.functions.AggregateFunction
-import org.apache.flink.api.common.typeinfo.TypeInformation
 import org.apache.flink.core.fs.FileSystem.WriteMode
-import org.apache.flink.streaming.api.functions.timestamps.BoundedOutOfOrdernessTimestampExtractor
+import org.apache.flink.streaming.api.functions.timestamps.{AscendingTimestampExtractor, BoundedOutOfOrdernessTimestampExtractor}
 import org.apache.flink.streaming.api.scala.function.ProcessWindowFunction
 import org.apache.flink.streaming.api.scala.{DataStream, StreamExecutionEnvironment}
 import org.apache.flink.streaming.api.windowing.assigners.TumblingProcessingTimeWindows

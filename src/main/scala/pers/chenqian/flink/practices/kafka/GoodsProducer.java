@@ -15,7 +15,7 @@ public class GoodsProducer {
 
     static Random random = new Random();
     static int gidBound = 4;
-    static int uidBound = 99999;
+    static int uidBound = 9999;
 
     public static void main(String[] args) throws Exception {
 
@@ -45,7 +45,7 @@ public class GoodsProducer {
         }
 
         int lastGid = genGid();
-        int lastUid = genUid();
+        int lastUid = 30000;
         ProducerRecord<String, String> tooLateMsg = new ProducerRecord<String, String>
                 (topic, lastGid + ":" + lastUid + ":0:0:0:0:0:" + (System.currentTimeMillis() - 111117000));
         procuder.send(tooLateMsg);
@@ -65,13 +65,13 @@ public class GoodsProducer {
     }
 
     private static int genGid() {
-        return random.nextInt(gidBound);
-//        return 100;
+//        return random.nextInt(gidBound);
+        return 100;
     }
 
     private static int genUid() {
-//        return random.nextInt(uidBound);
-        return 10002;
+        return random.nextInt(uidBound);
+//        return 10002;
     }
 
 

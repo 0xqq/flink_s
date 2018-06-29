@@ -30,6 +30,7 @@ object WithKafka extends WithKafkaBasic with WithKafkaFailed {
 
     // get the execution environment
     val env = StreamExecutionEnvironment.getExecutionEnvironment
+    //设置流的时间特征
 //    env.setStreamTimeCharacteristic(TimeCharacteristic.EventTime)
     import org.apache.flink.api.scala._
 
@@ -41,6 +42,7 @@ object WithKafka extends WithKafkaBasic with WithKafkaFailed {
     //addToEs(mappedDS)
 //    addSink(mappedDS)
 //    assignTimestampsAndWatermarks(mappedDS)
+//    mappedDS.iterate()
 //    window(mappedDS)
 //    windowAll(mappedDS)
 //    aggregate(mappedDS)
