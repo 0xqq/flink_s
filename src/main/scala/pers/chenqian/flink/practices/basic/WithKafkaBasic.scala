@@ -6,6 +6,7 @@ import java.util
 import org.apache.flink.api.common.accumulators.DoubleMaximum
 import org.apache.flink.api.common.functions.AggregateFunction
 import org.apache.flink.core.fs.FileSystem.WriteMode
+import org.apache.flink.streaming.api.collector.selector.OutputSelector
 import org.apache.flink.streaming.api.functions.timestamps.{AscendingTimestampExtractor, BoundedOutOfOrdernessTimestampExtractor}
 import org.apache.flink.streaming.api.scala.function.ProcessWindowFunction
 import org.apache.flink.streaming.api.scala.{DataStream, StreamExecutionEnvironment}
@@ -15,10 +16,14 @@ import org.apache.flink.streaming.api.windowing.windows.TimeWindow
 import org.apache.flink.streaming.connectors.redis.RedisSink
 import org.apache.flink.streaming.connectors.redis.common.config.FlinkJedisPoolConfig
 import org.apache.flink.table.api._
+import _root_.java.lang
+
+import _root_.java.util
 import org.apache.flink.table.sinks.CsvTableSink
 import org.apache.flink.util.Collector
 import pers.chenqian.flink.practices.constants.{Idx, Key}
 import pers.chenqian.flink.practices.entities.GrVo
+import pers.chenqian.flink.practices.selector.{MyJOutputSelector, MyOutputSelector}
 import pers.chenqian.flink.practices.sink.RedisExampleMapper
 
 import _root_.scala.collection.mutable
@@ -105,6 +110,20 @@ class WithKafkaBasic {
       .map(_.mkString("|"))
       .print()
 
+  }
+
+
+  def coGroup(env: StreamExecutionEnvironment, mappedDS: DataStream[Array[Double]]) = {
+    import org.apache.flink.api.scala._
+
+    val seq = Seq("asd", "s32", "h4sdsd", "e").map(str => str.length -> str)
+    val localDS = env.fromCollection(seq).keyBy(_._1.toDouble)
+
+    val keyedDS = mappedDS.keyBy(_ (Idx.GOODS_ID))
+
+    val cg = keyedDS.coGroup(localDS)
+    val as = cg.where(_ (Idx.GOODS_ID))
+//    as.
   }
 
 
@@ -258,6 +277,22 @@ class WithKafkaBasic {
       .toRetractStream[(Double, Double)]
       .writeAsText(csvPath, WriteMode.NO_OVERWRITE)
       .setParallelism(1)
+
+  }
+
+
+  def split(env: StreamExecutionEnvironment, mappedDS: DataStream[Array[Double]]) = {
+    val ss = mappedDS.split(new OutputSelector[Array[Double]] {
+
+      override def select(value: Array[Double]): lang.Iterable[String] = {
+        val list = new util.ArrayList[String]
+        list.add(value(Idx.STAY_MS).toString)
+        return list
+      }
+
+    })
+
+    ss.print()
 
   }
 

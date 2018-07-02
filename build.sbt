@@ -41,7 +41,6 @@ libraryDependencies ++= Seq(
   "com.fasterxml.jackson.module" %% "jackson-module-scala" % "2.9.5",
 
   "mysql" % "mysql-connector-java" % "5.1.43"
-
 ).map(_.exclude("org.slf4j", "*"))
 
 

@@ -1,22 +1,11 @@
 package pers.chenqian.flink.practices
 
-import java.net.{InetAddress, InetSocketAddress}
 import java.util.Properties
 
 import org.apache.flink.api.common.serialization.SimpleStringSchema
-import org.apache.flink.streaming.api.TimeCharacteristic
-import org.apache.flink.streaming.api.functions.timestamps.BoundedOutOfOrdernessTimestampExtractor
 import org.apache.flink.streaming.api.scala.{DataStream, StreamExecutionEnvironment}
-import org.apache.flink.streaming.api.windowing.time.Time
-import org.apache.flink.streaming.connectors.elasticsearch.ElasticsearchSinkFunction
 import org.apache.flink.streaming.connectors.kafka.FlinkKafkaConsumer011
-import org.apache.kafka.clients.consumer.ConsumerRecord
-import org.elasticsearch.action.index.IndexRequest
-import org.elasticsearch.client.Requests
 import pers.chenqian.flink.practices.basic.{WithKafkaBasic, WithKafkaFailed}
-import pers.chenqian.flink.practices.constants.Key
-
-import scala.collection.mutable
 
 object WithKafka extends WithKafkaBasic with WithKafkaFailed {
 
@@ -42,13 +31,16 @@ object WithKafka extends WithKafkaBasic with WithKafkaFailed {
     //addToEs(mappedDS)
 //    addSink(mappedDS)
 //    assignTimestampsAndWatermarks(mappedDS)
-//    mappedDS.iterate()
+//    coGroup(env, mappedDS)
+//    mappedDS.split()
 //    window(mappedDS)
 //    windowAll(mappedDS)
 //    aggregate(mappedDS)
 //    reduce(mappedDS)
 //    sqlOnly(env, mappedDS)
 //    scanAndSqlOpe(env, mappedDS)
+    split(env, mappedDS)
+
 
     env.execute("Socket Window WordCount")
   }
