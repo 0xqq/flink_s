@@ -6,7 +6,7 @@ scalaVersion := "2.11.12"
 
 lazy val slf4jVer = "1.7.25"
 lazy val flinkVer = "1.5.0"
-lazy val kafkaVer = "0.11.0.2"
+lazy val kafkaVer = "1.1.0"
 
 
 libraryDependencies ++= Seq(

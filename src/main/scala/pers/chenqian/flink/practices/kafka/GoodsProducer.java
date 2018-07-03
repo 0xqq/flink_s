@@ -45,9 +45,9 @@ public class GoodsProducer {
         }
 
         int lastGid = genGid();
-        int lastUid = 30000;
+        int lastUid = genUid();
         ProducerRecord<String, String> tooLateMsg = new ProducerRecord<String, String>
-                (topic, lastGid + ":" + lastUid + ":0:0:0:0:0:" + (System.currentTimeMillis() - 111117000));
+                (topic, lastGid + ":" + lastUid + ":0:0:0:0:1:" + (System.currentTimeMillis() - 111117000));
         procuder.send(tooLateMsg);
         sumUid += lastUid;
         System.out.println("sumUid:" + sumUid);
@@ -65,8 +65,8 @@ public class GoodsProducer {
     }
 
     private static int genGid() {
-//        return random.nextInt(gidBound);
-        return 100;
+        return random.nextInt(gidBound);
+//        return 100;
     }
 
     private static int genUid() {

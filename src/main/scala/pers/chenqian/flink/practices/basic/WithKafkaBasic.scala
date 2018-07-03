@@ -17,13 +17,12 @@ import org.apache.flink.streaming.connectors.redis.RedisSink
 import org.apache.flink.streaming.connectors.redis.common.config.FlinkJedisPoolConfig
 import org.apache.flink.table.api._
 import _root_.java.lang
-
 import _root_.java.util
+
 import org.apache.flink.table.sinks.CsvTableSink
 import org.apache.flink.util.Collector
 import pers.chenqian.flink.practices.constants.{Idx, Key}
 import pers.chenqian.flink.practices.entities.GrVo
-import pers.chenqian.flink.practices.selector.{MyJOutputSelector, MyOutputSelector}
 import pers.chenqian.flink.practices.sink.RedisExampleMapper
 
 import _root_.scala.collection.mutable
@@ -75,6 +74,7 @@ class WithKafkaBasic {
     //    }))
   }
 
+
   def addSink(mappedDS: DataStream[Array[Double]]) = {
     import org.apache.flink.api.scala._
 
@@ -88,10 +88,11 @@ class WithKafkaBasic {
       .build()
 
     mappedDS
-      .map(arr => arr(Idx.GOODS_ID).toString -> arr(Idx.USER_ID).toString)
       .windowAll(TumblingProcessingTimeWindows.of(Time.seconds(10)))
       .maxBy(Idx.USER_ID)
+      .map(arr => arr(Idx.GOODS_ID).toString -> arr(Idx.USER_ID).toString)
       .addSink(new RedisSink[(String, String)](conf, new RedisExampleMapper))
+      .setParallelism(1)
 
   }
 
@@ -127,22 +128,20 @@ class WithKafkaBasic {
   }
 
 
+  def iterate1(env: StreamExecutionEnvironment, mappedDS: DataStream[Array[Double]]) = {
+//    mappedDS.iterate()
+  }
+
+
+  /**
+    * keyBy + window 只考虑了当前window内的数据情况
+    */
   def window(mappedDS: DataStream[Array[Double]]) = {
     import org.apache.flink.api.scala._
 
     mappedDS
       .keyBy(_ (Idx.GOODS_ID))
-      .window(TumblingProcessingTimeWindows.of(Time.seconds(10)))
-      .maxBy(Idx.USER_ID)
-      .map(_.mkString("|"))
-      .print()
-  }
-
-  def windowAll(mappedDS: DataStream[Array[Double]]) = {
-    import org.apache.flink.api.scala._
-
-    mappedDS
-      .windowAll(TumblingProcessingTimeWindows.of(Time.seconds(10)))
+      .window(TumblingProcessingTimeWindows.of(Time.seconds(5)))
       .maxBy(Idx.USER_ID)
       .map(_.mkString("|"))
       .print()
@@ -182,6 +181,18 @@ class WithKafkaBasic {
 
   }
 
+  /**
+    * windowAll 只考虑了当前window内的数据情况
+    */
+  def windowAll(mappedDS: DataStream[Array[Double]]) = {
+    import org.apache.flink.api.scala._
+
+    mappedDS
+      .windowAll(TumblingProcessingTimeWindows.of(Time.seconds(5)))
+      .maxBy(Idx.USER_ID)
+      .map(_.mkString("|"))
+      .print()
+  }
 
   def aggregate(mappedDS: DataStream[Array[Double]]) = {
     import org.apache.flink.api.scala._
@@ -232,6 +243,9 @@ class WithKafkaBasic {
 
   val CSV_BASIC_PATH = s"/Users/sunzhongqian/tmp/csv/${Key.T_GOODS_RAITING}/"
 
+  /**
+    * sql 会考虑历史全部数据
+    */
   def sqlOnly(env: StreamExecutionEnvironment, mappedDS: DataStream[Array[Double]]) = {
     val tableEnv = TableEnvironment.getTableEnvironment(env)
     import org.apache.flink.api.scala._
@@ -253,12 +267,15 @@ class WithKafkaBasic {
     val asd = retractStream
       .filter(_._1)
       .map(tp => tp._2)
-      .writeAsText(csvPath, WriteMode.NO_OVERWRITE)
+      .writeAsText(csvPath, WriteMode.OVERWRITE)
+//      .print()
       .setParallelism(1)
 
   }
 
-
+  /**
+    * sql 类算子也会考虑历史全部数据
+    */
   def scanAndSqlOpe(env: StreamExecutionEnvironment, mappedDS: DataStream[Array[Double]]) = {
     val tableEnv = TableEnvironment.getTableEnvironment(env)
     import org.apache.flink.api.scala._
@@ -275,28 +292,48 @@ class WithKafkaBasic {
       .groupBy('goodsId)
       .select('goodsId, 'userId.max as 'maxUid)
       .toRetractStream[(Double, Double)]
-      .writeAsText(csvPath, WriteMode.NO_OVERWRITE)
+//      .writeAsText(csvPath, WriteMode.NO_OVERWRITE)
+      .print()
       .setParallelism(1)
 
   }
 
 
-  def split(env: StreamExecutionEnvironment, mappedDS: DataStream[Array[Double]]) = {
+  def split1(env: StreamExecutionEnvironment, mappedDS: DataStream[Array[Double]]) = {
+    import org.apache.flink.api.scala._
+
     val ss = mappedDS.split(new OutputSelector[Array[Double]] {
 
-      override def select(value: Array[Double]): lang.Iterable[String] = {
+      override def select(arr: Array[Double]): lang.Iterable[String] = {
         val list = new util.ArrayList[String]
-        list.add(value(Idx.STAY_MS).toString)
+        val buyCounts = arr(Idx.BUY_COUNTS)
+        if (buyCounts == 1.0D) {
+          list.add(buyCounts.toString)
+        }
         return list
       }
 
     })
 
-    ss.print()
+    ss.map(_.mkString("|")).print()
 
   }
 
+  def split2(env: StreamExecutionEnvironment, mappedDS: DataStream[Array[Double]]) = {
+    import org.apache.flink.api.scala._
 
+    val ss = mappedDS.split(arr => {
+      val buyCounts = arr(Idx.BUY_COUNTS)
+      val lb = new mutable.ListBuffer[String]()
+      if (buyCounts == 1.0D) {
+        lb += buyCounts.toString
+      }
+
+      lb
+    })
+
+    ss.map(_.mkString("|")).print()
+  }
 
 
 }
